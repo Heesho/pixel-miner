@@ -26,7 +26,8 @@ interface IMiner {
     function index_Slot(uint256 index) external view returns (Slot memory);
     function getPrice(uint256 index) external view returns (uint256);
     function getPps() external view returns (uint256);
-
+    function getSlot(uint256 index) external view returns (Slot memory);
+    
     function mine(
         address miner,
         address provider,
@@ -166,7 +167,7 @@ contract Multicall is Ownable {
     }
 
     function getSlot(uint256 index) public view returns (SlotState memory state) {
-        IMiner.Slot memory slot = IMiner(miner).index_Slot(index);
+        IMiner.Slot memory slot = IMiner(miner).getSlot(index);
         state.epochId = slot.epochId;
         state.initPrice = slot.initPrice;
         state.startTime = slot.startTime;

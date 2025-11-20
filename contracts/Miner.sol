@@ -133,8 +133,10 @@ contract Miner is ReentrancyGuard, Ownable {
         uint256 mineTime = block.timestamp - slotCache.startTime;
         uint256 minedAmount = mineTime * slotCache.pps;
 
-        IPixel(pixel).mint(slotCache.miner, minedAmount);
-        emit Miner__Mint(slotCache.miner, index, epochId, minedAmount);
+        if (slotCache.miner != address(0)) {
+            IPixel(pixel).mint(slotCache.miner, minedAmount);
+            emit Miner__Mint(slotCache.miner, index, epochId, minedAmount);
+        }
 
         unchecked {
             slotCache.epochId++;

@@ -16,7 +16,7 @@ contract Pixel is ERC20, ERC20Permit, ERC20Votes, Ownable {
     event Pixel__Burned(address indexed account, uint256 amount);
     event Pixel__MinterUpdated(address indexed account, bool status);
 
-    constructor() ERC20("Pixel", "PIXEL") ERC20Permit("Pixel") {}
+    constructor() ERC20("Test Pixel", "TESTPIXEL") ERC20Permit("Test Pixel") {}
 
     function setMinter(address account, bool status) external onlyOwner {
         if (account == address(0)) revert Pixel__InvalidMinter();

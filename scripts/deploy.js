@@ -8,10 +8,11 @@ const AddressZero = "0x0000000000000000000000000000000000000000";
 /*===================================================================*/
 /*===========================  SETTINGS  ============================*/
 
-const MULTISIG_ADDRESS = "0xeE0CB49D2805DA6bC0A979ddAd87bb793fbB765E"; // Multisig Address
-const TREASURY_ADDRESS = "0x3539bccca86de11575eb70997b136f9b30d21751"; // Treasury Address
+const MULTISIG_ADDRESS = "0x7a8C895E7826F66e1094532cB435Da725dc3868f"; // Multisig Address
+const TREASURY_ADDRESS = "0x7a8C895E7826F66e1094532cB435Da725dc3868f"; // Treasury Address
+const ENTROPY_ADDRESS = "0x6E7D74FA7d5c90FEF9F0512987605a6d546181Bb"; // Entropy Address
 const WETH_ADDRESS = "0x4200000000000000000000000000000000000006"; // WETH Address
-const LP_ADDRESS = "0xD1DbB2E56533C55C3A637D13C53aeEf65c5D5703"; // LP Address
+const LP_ADDRESS = "0x0000000000000000000000000000000000000000"; // LP Address
 const ADDRESS_DEAD = "0x000000000000000000000000000000000000dEaD";
 const AUCTION_PERIOD = 86400; // 1 day
 const PRICE_MULTIPLIER = convert("1.2", 18); // 120%
@@ -21,39 +22,55 @@ const MIN_INIT_PRICE = convert("1", 18); // 1 LP
 /*===================================================================*/
 
 // Contract Variables
-let donut, miner, auction, multicall;
+let pixel, miner, auction, multicall;
 
 /*===================================================================*/
 /*===========================  CONTRACT DATA  =======================*/
 
 async function getContracts() {
+  pixel = await ethers.getContractAt(
+    "contracts/Pixel.sol:Pixel",
+    "0xa23952322DaEbcfeE1B953B55bFEA858E50B785b"
+  );
   miner = await ethers.getContractAt(
     "contracts/Miner.sol:Miner",
-    "0xF69614F4Ee8D4D3879dd53d5A039eB3114C794F6"
-  );
-  donut = await ethers.getContractAt(
-    "contracts/Miner.sol:Donut",
-    await miner.donut()
+    "0x823dE5874A68c269324e44576fB479Ee5905c6e0"
   );
   multicall = await ethers.getContractAt(
     "contracts/Multicall.sol:Multicall",
-    "0x3ec144554b484C6798A683E34c8e8E222293f323"
+    "0xfEaCABeeB2B20C526d0Bb1Db2B32eDCf65360E98"
   );
-  auction = await ethers.getContractAt(
-    "contracts/Auction.sol:Auction",
-    "0xC23E316705Feef0922F0651488264db90133ED38"
-  );
-  console.log("Contracts Retrieved");
+  // auction = await ethers.getContractAt("contracts/Auction.sol:Auction", "");
+  // console.log("Contracts Retrieved");
 }
 
 /*===========================  END CONTRACT DATA  ===================*/
 /*===================================================================*/
 
+async function deployPixel() {
+  console.log("Starting Pixel Deployment");
+  const pixelArtifact = await ethers.getContractFactory("Pixel");
+  const pixelContract = await pixelArtifact.deploy();
+  pixel = await pixelContract.deployed();
+  await sleep(5000);
+  console.log("Pixel Deployed at:", pixel.address);
+}
+
+async function verifyPixel() {
+  console.log("Starting Pixel Verification");
+  await hre.run("verify:verify", {
+    address: pixel.address,
+    contract: "contracts/Pixel.sol:Pixel",
+  });
+  console.log("Pixel Verified");
+}
 async function deployMiner() {
   console.log("Starting Miner Deployment");
   const minerArtifact = await ethers.getContractFactory("Miner");
   const minerContract = await minerArtifact.deploy(
     WETH_ADDRESS,
+    pixel.address,
+    ENTROPY_ADDRESS,
     TREASURY_ADDRESS,
     {
       gasPrice: ethers.gasPrice,
@@ -64,21 +81,17 @@ async function deployMiner() {
   console.log("Miner Deployed at:", miner.address);
 }
 
-async function verifyDonut() {
-  console.log("Starting Donut Verification");
-  await hre.run("verify:verify", {
-    address: donut.address,
-    contract: "contracts/Miner.sol:Donut",
-  });
-  console.log("Donut Verified");
-}
-
 async function verifyMiner() {
   console.log("Starting Miner Verification");
   await hre.run("verify:verify", {
     address: miner.address,
     contract: "contracts/Miner.sol:Miner",
-    constructorArguments: [WETH_ADDRESS, TREASURY_ADDRESS],
+    constructorArguments: [
+      WETH_ADDRESS,
+      pixel.address,
+      ENTROPY_ADDRESS,
+      TREASURY_ADDRESS,
+    ],
   });
   console.log("Miner Verified");
 }
@@ -142,9 +155,10 @@ async function verifyAuction() {
 
 async function printDeployment() {
   console.log("**************************************************************");
-  console.log("Donut: ", donut.address);
+  console.log("Pixel: ", pixel.address);
   console.log("Miner: ", miner.address);
   console.log("Multicall: ", multicall.address);
+  // console.log("Auction: ", auction.address);
   console.log("**************************************************************");
 }
 
@@ -159,6 +173,7 @@ async function main() {
   //===================================================================
 
   // console.log("Starting System Deployment");
+  // await deployPixel();
   // await deployMiner();
   // await deployAuction();
   // await deployMulticall();
@@ -171,7 +186,7 @@ async function main() {
   //===================================================================
 
   // console.log("Starting System Verification");
-  // await verifyDonut();
+  // await verifyPixel();
   // await sleep(5000);
   // await verifyMiner();
   // await sleep(5000);

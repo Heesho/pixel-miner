@@ -16,8 +16,17 @@ const normalizeHexColor = (str) => {
 const AddressZero = "0x0000000000000000000000000000000000000000";
 const AddressDead = "0x000000000000000000000000000000000000dEaD";
 
-let owner, multisig, treasury, user0, user1, user2, user3, provider0, provider1;
-let weth, pixel, miner, multicall;
+let owner,
+  multisig,
+  treasury,
+  user0,
+  user1,
+  user2,
+  user3,
+  provider0,
+  provider1,
+  entropyProvider;
+let weth, pixel, miner, multicall, entropy;
 let auction0, auction1;
 
 describe("local: test0", function () {
@@ -34,6 +43,7 @@ describe("local: test0", function () {
       user3,
       provider0,
       provider1,
+      entropyProvider,
     ] = await ethers.getSigners();
 
     const wethArtifact = await ethers.getContractFactory("Base");
@@ -44,10 +54,15 @@ describe("local: test0", function () {
     pixel = await pixelArtifact.deploy();
     console.log("- Pixel Initialized");
 
+    const entropyArtifact = await ethers.getContractFactory("TestMockEntropy");
+    entropy = await entropyArtifact.deploy(entropyProvider.address);
+    console.log("- Entropy Initialized");
+
     const minerArtifact = await ethers.getContractFactory("Miner");
     miner = await minerArtifact.deploy(
       weth.address,
       pixel.address,
+      entropy.address,
       treasury.address
     );
     console.log("- Miner Initialized");
@@ -701,5 +716,295 @@ describe("local: test0", function () {
     console.log("Pixel Balance: ", divDec(res.pixelBalance));
     console.log("ETH Balance: ", divDec(res.ethBalance));
     console.log("WETH Balance: ", divDec(res.wethBalance));
+  });
+
+  it("Set Multipliers", async function () {
+    console.log("******************************************************");
+    console.log("- current multipliers: ", await multicall.getMultipliers());
+    const multipliers = [
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("1.0", 18),
+      convert("2.0", 18),
+      convert("3.0", 18),
+      convert("4.0", 18),
+      convert("5.0", 18),
+      convert("10.0", 18),
+    ];
+    await miner.connect(multisig).setMultipliers(multipliers);
+    console.log("- multipliers set to ", await multicall.getMultipliers());
+  });
+
+  it("User0 mines randomly", async function () {
+    console.log("******************************************************");
+    const iterations = 200;
+    const capacity = (await miner.capacity()).toNumber();
+    for (let i = 0; i < iterations; i++) {
+      const index = Math.floor(Math.random() * capacity);
+      const slot = await multicall.getSlot(index);
+      const price = slot.price;
+      const epochId = slot.epochId;
+      const color =
+        "#" +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+      const latest = await ethers.provider.getBlock("latest");
+      const deadline = latest.timestamp + 3600; // +1 hour
+      await multicall
+        .connect(user0)
+        .mine(provider0.address, index, epochId, deadline, price, color, {
+          value: price,
+        });
+    }
+  });
+
+  it("User1 mines randomly", async function () {
+    console.log("******************************************************");
+    const iterations = 200;
+    const capacity = (await miner.capacity()).toNumber();
+    for (let i = 0; i < iterations; i++) {
+      const index = Math.floor(Math.random() * capacity);
+      const slot = await multicall.getSlot(index);
+      const price = slot.price;
+      const epochId = slot.epochId;
+      const color =
+        "#" +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+      const latest = await ethers.provider.getBlock("latest");
+      const deadline = latest.timestamp + 3600; // +1 hour
+      await multicall
+        .connect(user1)
+        .mine(provider0.address, index, epochId, deadline, price, color, {
+          value: price,
+        });
+    }
+  });
+
+  it("User2 mines randomly", async function () {
+    console.log("******************************************************");
+    const iterations = 200;
+    const capacity = (await miner.capacity()).toNumber();
+    for (let i = 0; i < iterations; i++) {
+      const index = Math.floor(Math.random() * capacity);
+      const slot = await multicall.getSlot(index);
+      const price = slot.price;
+      const epochId = slot.epochId;
+      const color =
+        "#" +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+      const latest = await ethers.provider.getBlock("latest");
+      const deadline = latest.timestamp + 3600; // +1 hour
+      await multicall
+        .connect(user2)
+        .mine(provider0.address, index, epochId, deadline, price, color, {
+          value: price,
+        });
+    }
+  });
+
+  it("User3 mines randomly", async function () {
+    console.log("******************************************************");
+    const iterations = 200;
+    const capacity = (await miner.capacity()).toNumber();
+    for (let i = 0; i < iterations; i++) {
+      const index = Math.floor(Math.random() * capacity);
+      const slot = await multicall.getSlot(index);
+      const price = slot.price;
+      const epochId = slot.epochId;
+      const color =
+        "#" +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+      const latest = await ethers.provider.getBlock("latest");
+      const deadline = latest.timestamp + 3600; // +1 hour
+      await multicall
+        .connect(user3)
+        .mine(provider0.address, index, epochId, deadline, price, color, {
+          value: price,
+        });
+    }
+  });
+
+  it("Miner State, user0", async function () {
+    console.log("******************************************************");
+    let res = await multicall.getMiner(user0.address);
+    console.log("PPS: ", divDec(res.pps));
+    console.log("Pixel Price: ", divDec(res.pixelPrice));
+    console.log("Pixel Balance: ", divDec(res.pixelBalance));
+    console.log("ETH Balance: ", divDec(res.ethBalance));
+    console.log("WETH Balance: ", divDec(res.wethBalance));
+  });
+
+  it("Miner State, user1", async function () {
+    console.log("******************************************************");
+    let res = await multicall.getMiner(user0.address);
+    console.log("PPS: ", divDec(res.pps));
+    console.log("Pixel Price: ", divDec(res.pixelPrice));
+    console.log("Pixel Balance: ", divDec(res.pixelBalance));
+    console.log("ETH Balance: ", divDec(res.ethBalance));
+    console.log("WETH Balance: ", divDec(res.wethBalance));
+  });
+
+  it("Miner State, user2", async function () {
+    console.log("******************************************************");
+    let res = await multicall.getMiner(user0.address);
+    console.log("PPS: ", divDec(res.pps));
+    console.log("Pixel Price: ", divDec(res.pixelPrice));
+    console.log("Pixel Balance: ", divDec(res.pixelBalance));
+    console.log("ETH Balance: ", divDec(res.ethBalance));
+    console.log("WETH Balance: ", divDec(res.wethBalance));
+  });
+
+  it("Miner State, user3", async function () {
+    console.log("******************************************************");
+    let res = await multicall.getMiner(user0.address);
+    console.log("PPS: ", divDec(res.pps));
+    console.log("Pixel Price: ", divDec(res.pixelPrice));
+    console.log("Pixel Balance: ", divDec(res.pixelBalance));
+    console.log("ETH Balance: ", divDec(res.ethBalance));
+    console.log("WETH Balance: ", divDec(res.wethBalance));
+  });
+
+  it("Set Multipliers", async function () {
+    console.log("******************************************************");
+    console.log("- current multipliers: ", await multicall.getMultipliers());
+    const multipliers = [
+      ...Array(900).fill(convert("1.0", 18)),
+      ...Array(49).fill(convert("1.5", 18)),
+      ...Array(30).fill(convert("2.0", 18)),
+      ...Array(15).fill(convert("3.0", 18)),
+      ...Array(5).fill(convert("5.0", 18)),
+      ...Array(1).fill(convert("10.0", 18)),
+    ];
+    await miner.connect(multisig).setMultipliers(multipliers);
+    console.log("- multipliers set to ", await multicall.getMultipliers());
+  });
+
+  it("User0 mines randomly", async function () {
+    console.log("******************************************************");
+    const iterations = 200;
+    const capacity = (await miner.capacity()).toNumber();
+    for (let i = 0; i < iterations; i++) {
+      const index = Math.floor(Math.random() * capacity);
+      const slot = await multicall.getSlot(index);
+      const price = slot.price;
+      const epochId = slot.epochId;
+      const color =
+        "#" +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+      const latest = await ethers.provider.getBlock("latest");
+      const deadline = latest.timestamp + 3600; // +1 hour
+      await multicall
+        .connect(user0)
+        .mine(provider0.address, index, epochId, deadline, price, color, {
+          value: price,
+        });
+    }
+  });
+
+  it("Forward time", async function () {
+    console.log("******************************************************");
+    await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+    await ethers.provider.send("evm_mine", []);
+  });
+
+  it("User1 mines randomly", async function () {
+    console.log("******************************************************");
+    const iterations = 200;
+    const capacity = (await miner.capacity()).toNumber();
+    for (let i = 0; i < iterations; i++) {
+      const index = Math.floor(Math.random() * capacity);
+      const slot = await multicall.getSlot(index);
+      const price = slot.price;
+      const epochId = slot.epochId;
+      const color =
+        "#" +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+      const latest = await ethers.provider.getBlock("latest");
+      const deadline = latest.timestamp + 3600; // +1 hour
+      await multicall
+        .connect(user1)
+        .mine(provider0.address, index, epochId, deadline, price, color, {
+          value: price,
+        });
+    }
+  });
+
+  it("Forward time", async function () {
+    console.log("******************************************************");
+    await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+    await ethers.provider.send("evm_mine", []);
+  });
+
+  it("User2 mines randomly", async function () {
+    console.log("******************************************************");
+    const iterations = 200;
+    const capacity = (await miner.capacity()).toNumber();
+    for (let i = 0; i < iterations; i++) {
+      const index = Math.floor(Math.random() * capacity);
+      const slot = await multicall.getSlot(index);
+      const price = slot.price;
+      const epochId = slot.epochId;
+      const color =
+        "#" +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+      const latest = await ethers.provider.getBlock("latest");
+      const deadline = latest.timestamp + 3600; // +1 hour
+      await multicall
+        .connect(user2)
+        .mine(provider0.address, index, epochId, deadline, price, color, {
+          value: price,
+        });
+    }
+  });
+
+  it("Forward time", async function () {
+    console.log("******************************************************");
+    await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+    await ethers.provider.send("evm_mine", []);
+  });
+
+  it("User3 mines randomly", async function () {
+    console.log("******************************************************");
+    const iterations = 200;
+    const capacity = (await miner.capacity()).toNumber();
+    for (let i = 0; i < iterations; i++) {
+      const index = Math.floor(Math.random() * capacity);
+      const slot = await multicall.getSlot(index);
+      const price = slot.price;
+      const epochId = slot.epochId;
+      const color =
+        "#" +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, "0");
+      const latest = await ethers.provider.getBlock("latest");
+      const deadline = latest.timestamp + 3600; // +1 hour
+      await multicall
+        .connect(user3)
+        .mine(provider0.address, index, epochId, deadline, price, color, {
+          value: price,
+        });
+    }
   });
 });

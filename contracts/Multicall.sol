@@ -14,6 +14,7 @@ interface IMiner {
         uint256 epochId;
         uint256 initPrice;
         uint256 startTime;
+        uint256 multiplier;
         uint256 pps;
         address miner;
         string color;
@@ -24,10 +25,14 @@ interface IMiner {
     function startTime() external view returns (uint256);
     function capacity() external view returns (uint256);
     function index_Slot(uint256 index) external view returns (Slot memory);
+    function getMultipliers() external view returns (uint256[] memory);
     function getPrice(uint256 index) external view returns (uint256);
     function getPps() external view returns (uint256);
     function getSlot(uint256 index) external view returns (Slot memory);
-    
+    function getEntropy() external view returns (address);
+    function getEntropyFee() external view returns (uint256);
+    function getMultipliersLength() external view returns (uint256);
+
     function mine(
         address miner,
         address provider,
@@ -36,7 +41,7 @@ interface IMiner {
         uint256 deadline,
         uint256 maxPrice,
         string memory color
-    ) external returns (uint256 price);
+    ) external payable returns (uint256 price);
 }
 
 interface IAuction {
@@ -81,6 +86,7 @@ contract Multicall is Ownable {
         uint256 initPrice;
         uint256 startTime;
         uint256 price;
+        uint256 multiplier;
         uint256 pps;
         uint256 mined;
         address miner;
@@ -113,10 +119,12 @@ contract Multicall is Ownable {
         uint256 maxPrice,
         string memory color
     ) external payable {
-        IWETH(quote).deposit{value: msg.value}();
+        uint256 entropyFee = IMiner(miner).getEntropyFee();
+        uint256 payment = msg.value - entropyFee;
+        IWETH(quote).deposit{value: payment}();
         IERC20(quote).safeApprove(miner, 0);
-        IERC20(quote).safeApprove(miner, msg.value);
-        IMiner(miner).mine(msg.sender, provider, index, epochId, deadline, maxPrice, color);
+        IERC20(quote).safeApprove(miner, payment);
+        IMiner(miner).mine{value: entropyFee}(msg.sender, provider, index, epochId, deadline, maxPrice, color);
         uint256 wethBalance = IERC20(quote).balanceOf(address(this));
         IERC20(quote).safeTransfer(msg.sender, wethBalance);
     }
@@ -172,7 +180,8 @@ contract Multicall is Ownable {
         state.initPrice = slot.initPrice;
         state.startTime = slot.startTime;
         state.price = IMiner(miner).getPrice(index);
-        state.pps = slot.pps;
+        state.multiplier = slot.multiplier;
+        state.pps = slot.pps * state.multiplier / 1e18;
         state.mined = state.pps * (block.timestamp - state.startTime);
         state.miner = slot.miner;
         state.color = slot.color;
@@ -185,5 +194,13 @@ contract Multicall is Ownable {
             states[i - startIndex] = getSlot(i);
         }
         return states;
+    }
+
+    function getEntropyFee() external view returns (uint256) {
+        return IMiner(miner).getEntropyFee();
+    }
+
+    function getMultipliers() external view returns (uint256[] memory) {
+        return IMiner(miner).getMultipliers();  
     }
 }

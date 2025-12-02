@@ -27,8 +27,10 @@ contract Miner is IEntropyConsumer, ReentrancyGuard, Ownable {
     uint256 public constant INITIAL_PPS = 2 ether;
     uint256 public constant HALVING_PERIOD = 30 days;
     uint256 public constant TAIL_PPS = 0.01 ether;
+
     uint256 public constant MAX_CAPACITY = 1024;
     uint256 public constant DEFAULT_MULTIPLIER = 1e18;
+    uint256 public constant MULTIPLIER_DURATION = 24 hours;
 
     address public immutable pixel;
     address public immutable quote;
@@ -50,6 +52,7 @@ contract Miner is IEntropyConsumer, ReentrancyGuard, Ownable {
         uint256 startTime;
         uint256 pps;
         uint256 multiplier;
+        uint256 lastMultiplierTime;
         address miner;
         string color;
     }
@@ -160,20 +163,26 @@ contract Miner is IEntropyConsumer, ReentrancyGuard, Ownable {
         slotCache.initPrice = newInitPrice;
         slotCache.startTime = block.timestamp;
         slotCache.miner = miner;
-        slotCache.multiplier = DEFAULT_MULTIPLIER;
         slotCache.pps = _getPpsFromTime(block.timestamp) / capacity;
         slotCache.color = color;
+
+        bool shouldUpdateMultiplier = block.timestamp - slotCache.lastMultiplierTime > MULTIPLIER_DURATION;
+        if (shouldUpdateMultiplier) {
+            slotCache.multiplier = DEFAULT_MULTIPLIER;
+        }
 
         index_Slot[index] = slotCache;
 
         emit Miner__Mine(msg.sender, miner, provider, index, epochId, price, color);
 
-        uint128 fee = entropy.getFeeV2();
-        if (msg.value < fee) revert Miner__InsufficientFee();
-        uint64 seq = entropy.requestV2{value: fee}();
-        sequence_Index[seq] = index;
-        sequence_Epoch[seq] = slotCache.epochId;
-        emit Miner__EntropyRequested(index, slotCache.epochId, seq);
+        if (shouldUpdateMultiplier) {
+            uint128 fee = entropy.getFeeV2();
+            if (msg.value < fee) revert Miner__InsufficientFee();
+            uint64 seq = entropy.requestV2{value: fee}();
+            sequence_Index[seq] = index;
+            sequence_Epoch[seq] = slotCache.epochId;
+            emit Miner__EntropyRequested(index, slotCache.epochId, seq);
+        }
 
         return price;
     }
@@ -189,8 +198,9 @@ contract Miner is IEntropyConsumer, ReentrancyGuard, Ownable {
         if (slotCache.epochId != epoch || slotCache.miner == address(0)) return;
 
         uint256 multiplier = _drawMultiplier(randomNumber);
-        if (multiplier == 0) multiplier = DEFAULT_MULTIPLIER;
         slotCache.multiplier = multiplier;
+        slotCache.lastMultiplierTime = block.timestamp;
+
         index_Slot[index] = slotCache;
         emit Miner__MultiplierSet(index, epoch, multiplier);
     }
@@ -198,8 +208,8 @@ contract Miner is IEntropyConsumer, ReentrancyGuard, Ownable {
     function _drawMultiplier(bytes32 randomNumber) internal view returns (uint256) {
         uint256 length = multipliers.length;
         if (length == 0) return DEFAULT_MULTIPLIER;
-        uint256 idx = uint256(randomNumber) % length;
-        return multipliers[idx];
+        uint256 index = uint256(randomNumber) % length;
+        return multipliers[index];
     }
 
     function _getPriceFromCache(Slot memory slotCache) internal view returns (uint256) {

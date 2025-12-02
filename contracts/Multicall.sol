@@ -14,8 +14,9 @@ interface IMiner {
         uint256 epochId;
         uint256 initPrice;
         uint256 startTime;
-        uint256 multiplier;
         uint256 pps;
+        uint256 multiplier;
+        uint256 lastMultiplierTime;
         address miner;
         string color;
     }
@@ -32,6 +33,7 @@ interface IMiner {
     function getEntropy() external view returns (address);
     function getEntropyFee() external view returns (uint256);
     function getMultipliersLength() external view returns (uint256);
+    function MULTIPLIER_DURATION() external view returns (uint256);
 
     function mine(
         address miner,
@@ -86,8 +88,9 @@ contract Multicall is Ownable {
         uint256 initPrice;
         uint256 startTime;
         uint256 price;
-        uint256 multiplier;
         uint256 pps;
+        uint256 multiplier;
+        uint256 multiplierTime;
         uint256 mined;
         address miner;
         string color;
@@ -181,6 +184,12 @@ contract Multicall is Ownable {
         state.startTime = slot.startTime;
         state.price = IMiner(miner).getPrice(index);
         state.multiplier = slot.multiplier;
+        uint256 duration = IMiner(miner).MULTIPLIER_DURATION();
+        if (block.timestamp < slot.lastMultiplierTime + duration) {
+            state.multiplierTime = slot.lastMultiplierTime + duration - block.timestamp;
+        } else {
+            state.multiplierTime = 0;
+        }
         state.pps = slot.pps * state.multiplier / 1e18;
         state.mined = state.pps * (block.timestamp - state.startTime);
         state.miner = slot.miner;
@@ -201,6 +210,6 @@ contract Multicall is Ownable {
     }
 
     function getMultipliers() external view returns (uint256[] memory) {
-        return IMiner(miner).getMultipliers();  
+        return IMiner(miner).getMultipliers();
     }
 }

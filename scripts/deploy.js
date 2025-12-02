@@ -30,15 +30,15 @@ let pixel, miner, auction, multicall;
 async function getContracts() {
   pixel = await ethers.getContractAt(
     "contracts/Pixel.sol:Pixel",
-    "0xa23952322DaEbcfeE1B953B55bFEA858E50B785b"
+    "0xA5db7214F7cc61c8b01AE05bD0042F50BEb46647"
   );
   miner = await ethers.getContractAt(
     "contracts/Miner.sol:Miner",
-    "0x823dE5874A68c269324e44576fB479Ee5905c6e0"
+    "0xfd8653E380b4028cA9bf2e03b3E4f4B37cC0B385"
   );
   multicall = await ethers.getContractAt(
     "contracts/Multicall.sol:Multicall",
-    "0xfEaCABeeB2B20C526d0Bb1Db2B32eDCf65360E98"
+    "0xF51A1059F155930305e9DddA4120B9f46BafB92E"
   );
   // auction = await ethers.getContractAt("contracts/Auction.sol:Auction", "");
   // console.log("Contracts Retrieved");
@@ -177,7 +177,7 @@ async function main() {
   // await deployMiner();
   // await deployAuction();
   // await deployMulticall();
-  // await printDeployment();
+  await printDeployment();
 
   /*********** UPDATE getContracts() with new addresses *************/
 
@@ -199,9 +199,22 @@ async function main() {
   // Transactions
   //===================================================================
 
-  // set auction on multicall
-  // await multicall.setAuction(auction.address);
-  // console.log("Auction set on Multicall");
+  // set minter on pixel to miner
+  // await pixel.setMinter(miner.address, true);
+  // console.log("Minter set on Pixel to Miner");
+
+  // set multipliers on
+
+  // console.log("Multipliers set on Miner");
+  // const multipliers = [
+  //   ...Array(5).fill(convert("1.0", 18)),
+  //   ...Array(4).fill(convert("2.0", 18)),
+  //   ...Array(3).fill(convert("3.0", 18)),
+  //   ...Array(2).fill(convert("5.0", 18)),
+  //   ...Array(1).fill(convert("10.0", 18)),
+  // ];
+  // await miner.setMultipliers(multipliers);
+  // console.log("Multipliers set on Miner");
 
   // set treasury on miner to auction
   // await miner.setTreasury(auction.address);
@@ -210,6 +223,9 @@ async function main() {
   // set ownership of miner to multisig
   // await miner.transferOwnership(MULTISIG_ADDRESS);
   // console.log("Ownership of Miner transferred to Multisig");
+
+  // console.log("Slot 0: ", await multicall.getSlot(0));
+  // console.log("Slot 0: ", await miner.getSlot(0));
 }
 
 main()

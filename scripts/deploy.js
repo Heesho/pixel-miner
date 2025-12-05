@@ -8,6 +8,7 @@ const AddressZero = "0x0000000000000000000000000000000000000000";
 /*===================================================================*/
 /*===========================  SETTINGS  ============================*/
 
+const DAO_ADDRESS = "0x69399790f5ef59d5074b7137C5De795837396444"; // DAO Address
 const MULTISIG_ADDRESS = "0x7a8C895E7826F66e1094532cB435Da725dc3868f"; // Multisig Address
 const TREASURY_ADDRESS = "0x7a8C895E7826F66e1094532cB435Da725dc3868f"; // Treasury Address
 const ENTROPY_ADDRESS = "0x6E7D74FA7d5c90FEF9F0512987605a6d546181Bb"; // Entropy Address
@@ -177,7 +178,7 @@ async function main() {
   // await deployMiner();
   // await deployAuction();
   // await deployMulticall();
-  await printDeployment();
+  // await printDeployment();
 
   /*********** UPDATE getContracts() with new addresses *************/
 
@@ -221,8 +222,8 @@ async function main() {
   // console.log("Treasury set on Miner to Auction");
 
   // set ownership of miner to multisig
-  // await miner.transferOwnership(MULTISIG_ADDRESS);
-  // console.log("Ownership of Miner transferred to Multisig");
+  // await miner.transferOwnership(DAO_ADDRESS);
+  // console.log("Ownership of Miner transferred to DAO");
 
   // console.log("Slot 0: ", await multicall.getSlot(0));
   // console.log("Slot 0: ", await miner.getSlot(0));
